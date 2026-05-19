@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+  https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.mayyaannkk.notificationengine</groupId>
+        <artifactId>notification-engine</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+        <!-- ../ means "go up one folder to find the parent pom" -->
+    </parent>
+
+    <artifactId>core</artifactId>
+    <name>Core Module</name>
+
+    <dependencies>
+        <!-- core needs persistence because it uses the Notification entity
+             and calls NotificationRepository to save/query records. -->
+        <dependency>
+            <groupId>com.mayyaannkk.notificationengine</groupId>
+            <artifactId>persistence</artifactId>
+            <version>${project.version}</version>
+            <!-- ${project.version} picks up 0.0.1-SNAPSHOT from the parent.
+                 If you change version in one place, all references update. -->
+        </dependency>
+
+        <!-- @Service, @Component, @Autowired — the basic Spring container -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- @Validated, @NotNull, @Size on request objects -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

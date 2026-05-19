@@ -1,0 +1,72 @@
+spring:
+  application:
+    name: notification-engine
+
+  # Database connection
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notif_db
+    username: app
+    password: secret
+    driver-class-name: org.postgresql.Driver
+    hikari:                      # HikariCP is Spring Boot's default connection pool
+      maximum-pool-size: 10      # max 10 simultaneous DB connections
+      minimum-idle: 2            # keep 2 warm connections ready at all times
+      connection-timeout: 30000  # throw an error if no connection available in 30s
+
+  # JPA / Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: validate         # NEVER use 'create' or 'update' in real apps.
+        # 'validate' checks your entities match the DB schema.
+      # Flyway handles the actual schema creation.
+    show-sql: false              # Set to true for debugging — logs every SQL query
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  # Flyway (database migrations)
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # Kafka
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all                  # Wait for ALL replicas to confirm before considering a send successful
+      retries: 3
+    consumer:
+      group-id: notification-engine
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.yourname.notificationengine.*"
+
+  # Redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# Actuator — health check and metrics endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Your custom application config
+app:
+  jwt:
+    secret: ${JWT_SECRET:local-dev-secret-change-in-production-min-256-bits}
+    expiration-ms: 86400000     # 24 hours
+  rate-limit:
+    max-per-minute: 100
