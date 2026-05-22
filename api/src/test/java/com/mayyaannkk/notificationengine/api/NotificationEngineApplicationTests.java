@@ -1,4 +1,4 @@
-package com.mayyaannkk.notificationengine;
+package com.mayyaannkk.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
