@@ -30,16 +30,6 @@
         </dependency>
         <dependency>
             <groupId>com.mayyaannkk.notificationengine</groupId>
-            <artifactId>kafka</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.mayyaannkk.notificationengine</groupId>
-            <artifactId>cache</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.mayyaannkk.notificationengine</groupId>
             <artifactId>channels</artifactId>
             <version>${project.version}</version>
         </dependency>
