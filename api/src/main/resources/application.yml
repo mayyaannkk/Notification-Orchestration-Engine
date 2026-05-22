@@ -38,6 +38,10 @@ app:
     expiration-ms: 86400000
   mail:
     from: ${GMAIL_USERNAME}
+  user:
+    username: ${APP_USERNAME:testuser}
+    password: ${APP_PASSWORD:testpass123}
+    tenant-id: ${APP_TENANT_ID:tenant-001}
 
 management:
   endpoints:
@@ -50,3 +54,7 @@ management:
 
 server:
   port: 8080
+
+  properties:
+    hibernate:
+      dialect: org.hibernate.dialect.PostgreSQLDialect

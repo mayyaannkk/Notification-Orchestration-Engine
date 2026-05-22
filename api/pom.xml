@@ -82,6 +82,12 @@
             <artifactId>kafka</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
     <build>
@@ -92,6 +98,9 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <mainClass>
+                        com.mayyaannkk.notificationengine.api.NotificationEngineApplication
+                    </mainClass>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>

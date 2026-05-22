@@ -1,11 +1,11 @@
-package com.mayyaannkk.api;
+package com.mayyaannkk.notificationengine.api;
 
 import org.springframework.boot.SpringApplication;
 
 public class TestNotificationEngineApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.from(NotificationEngineApplication::main).with(TestcontainersConfiguration.class).run(args);
+//		SpringApplication.from(NotificationEngineApplication::main).with(TestcontainersConfiguration.class).run(args);
 	}
 
 }

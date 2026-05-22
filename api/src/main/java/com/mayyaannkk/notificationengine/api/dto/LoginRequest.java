@@ -1,4 +1,4 @@
-package com.mayyaannkk.api.dto;
+package com.mayyaannkk.notificationengine.api.dto;
 
 
 import jakarta.validation.constraints.NotBlank;

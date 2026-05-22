@@ -1,4 +1,4 @@
-package com.mayyaannkk.api.dto;
+package com.mayyaannkk.notificationengine.api.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
