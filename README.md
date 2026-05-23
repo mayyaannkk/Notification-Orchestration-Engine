@@ -1,6 +1,7 @@
 # Notification Orchestration Engine
 
 A centralized, synchronous, multi-tenant notification delivery engine that runs on EC2, authenticates the users using JWT, and delivers notification via email.
+
 It also handles idempotency of notifications, and retries failed notifications at regular intervals.
 
 ## Live Demo
@@ -38,19 +39,21 @@ The application, at regular intervals, also tries to retry failed delivery by fe
 ***
 ## Architecture
 The application takes in the request, the controller takes it, validates the request and diverts it to the orchestrator which then first saves the notification in the DB with a state of PENDING.
+
 It then tries to send the notification via the specified channel, if successful, it will update the DB notification status to SENT. Else it will update to FAILED.
+
 This ensures that the notification is saved in the DB first, so even if the delivery fails, our scheduled retry will pick the FAILED ones and try to run them again.
 
 ***
 ## Notification Status Lifecycle
 
 The notification status works like a finite state machine and moves from PENDING to SENT/DEAD in a predictable manner:
-PENDING → SENT        (successful delivery)
-PENDING → FAILED      (delivery failed, eligible for retry)
-FAILED  → SENT        (retry succeeded)
-FAILED  → FAILED      (retry failed, retryCount incremented)
-FAILED  → DEAD        (retryCount reached maxAttempts, no more retries)
-PENDING → SKIPPED     (duplicate idempotency key detected)
+- PENDING → SENT        (successful delivery)
+- PENDING → FAILED      (delivery failed, eligible for retry)
+- FAILED  → SENT        (retry succeeded)
+- FAILED  → FAILED      (retry failed, retryCount incremented)
+- FAILED  → DEAD        (retryCount reached maxAttempts, no more retries)
+- PENDING → SKIPPED     (duplicate idempotency key detected)
 
 ***
 ## Tech Stack
