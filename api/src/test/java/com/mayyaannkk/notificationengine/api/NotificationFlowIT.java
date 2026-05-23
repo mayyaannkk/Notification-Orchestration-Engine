@@ -2,10 +2,10 @@ package com.mayyaannkk.notificationengine.api;
 
 import com.mayyaannkk.notificationengine.api.dto.LoginRequest;
 import com.mayyaannkk.notificationengine.api.dto.LoginResponse;
-import com.mayyaannkk.notificationengine.api.exception.ErrorResponse;
 import com.mayyaannkk.notificationengine.core.dto.NotificationRequest;
 import com.mayyaannkk.notificationengine.core.dto.NotificationResponse;
 import com.mayyaannkk.notificationengine.core.port.EmailSender;
+import com.mayyaannkk.notificationengine.core.port.NotificationDispatcher;
 import com.mayyaannkk.notificationengine.persistence.entity.Channel;
 import com.mayyaannkk.notificationengine.persistence.entity.Notification;
 import com.mayyaannkk.notificationengine.persistence.entity.NotificationStatus;
@@ -45,6 +45,9 @@ public class NotificationFlowIT {
     private NotificationRepository repository;
 
     @MockitoBean
+    private NotificationDispatcher notificationDispatcher;
+
+    @MockitoBean
     private EmailSender emailSender;
 
     // helper methods
@@ -69,7 +72,7 @@ public class NotificationFlowIT {
 
     @Test
     void fullFlow_loginThenSendNotification_saveAsSent() {
-        when(emailSender.send(any())).thenReturn(true);
+        when(notificationDispatcher.dispatchNotification(any())).thenReturn(true);
 
         String token = obtainToken();
 
@@ -87,11 +90,11 @@ public class NotificationFlowIT {
                 NotificationResponse.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-        assertThat(response.getBody().getStatus()).isEqualTo(NotificationStatus.SENT);
+        assertThat(response.getBody().getStatus()).isEqualTo(NotificationStatus.QUEUED);
 
         Optional<Notification> savedNotification = repository.findById(response.getBody().getId());
         assertThat(savedNotification).isPresent();
-        assertThat(savedNotification.get().getStatus()).isEqualTo(NotificationStatus.SENT);
+        assertThat(savedNotification.get().getStatus()).isEqualTo(NotificationStatus.QUEUED);
         assertThat(savedNotification.get().getRecipient()).isEqualTo("test@example.com");
     }
 

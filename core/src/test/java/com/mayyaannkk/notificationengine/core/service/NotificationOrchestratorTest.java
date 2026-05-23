@@ -3,6 +3,7 @@ package com.mayyaannkk.notificationengine.core.service;
 import com.mayyaannkk.notificationengine.core.dto.NotificationRequest;
 import com.mayyaannkk.notificationengine.core.dto.NotificationResponse;
 import com.mayyaannkk.notificationengine.core.port.EmailSender;
+import com.mayyaannkk.notificationengine.core.port.NotificationDispatcher;
 import com.mayyaannkk.notificationengine.persistence.entity.Channel;
 import com.mayyaannkk.notificationengine.persistence.entity.Notification;
 import com.mayyaannkk.notificationengine.persistence.entity.NotificationStatus;
@@ -29,7 +30,7 @@ class NotificationOrchestratorTest {
     private NotificationRepository notificationRepository;
 
     @Mock
-    private EmailSender emailSender;
+    private NotificationDispatcher notificationDispatcher;
 
     @InjectMocks
     private NotificationOrchestrator notificationOrchestrator;
@@ -56,17 +57,17 @@ class NotificationOrchestratorTest {
 
     @Test
     void process_emailSentSuccessfully_returnSentResponse() {
-        when(emailSender.send(any(Notification.class))).thenReturn(true);
+        when(notificationDispatcher.dispatchNotification(any(Notification.class))).thenReturn(true);
 
         NotificationResponse response = notificationOrchestrator.process(request, TENANT);
 
-        assertThat(response.getStatus()).isEqualTo(NotificationStatus.SENT);
+        assertThat(response.getStatus()).isEqualTo(NotificationStatus.QUEUED);
         assertThat(response.getId()).isNotNull();
     }
 
     @Test
     void process_emailFailed_returnFailedResponse() {
-        when(emailSender.send(any(Notification.class))).thenReturn(false);
+        when(notificationDispatcher.dispatchNotification(any(Notification.class))).thenReturn(false);
 
         NotificationResponse response = notificationOrchestrator.process(request, TENANT);
 
@@ -84,32 +85,32 @@ class NotificationOrchestratorTest {
 
         assertThat(response.getStatus()).isEqualTo(NotificationStatus.SKIPPED);
         verify(notificationRepository, never()).save(any(Notification.class));
-        verify(emailSender, never()).send(any(Notification.class));
+        verify(notificationDispatcher, never()).dispatchNotification(any(Notification.class));
     }
 
     @Test
     void process_noIdempotencyKeyFound_returnSentResponse() {
-        when(emailSender.send(any(Notification.class))).thenReturn(true);
+        when(notificationDispatcher.dispatchNotification(any(Notification.class))).thenReturn(true);
 
         NotificationResponse response = notificationOrchestrator.process(request, TENANT);
 
-        assertThat(response.getStatus()).isEqualTo(NotificationStatus.SENT);
+        assertThat(response.getStatus()).isEqualTo(NotificationStatus.QUEUED);
         verify(notificationRepository, never()).findByIdempotencyKey(any(String.class));
     }
 
     @Test
     void process_saveBeforeEmail_returnSentResponse() {
-        when(emailSender.send(any(Notification.class))).thenReturn(true);
+        when(notificationDispatcher.dispatchNotification(any(Notification.class))).thenReturn(true);
 
         NotificationResponse response = notificationOrchestrator.process(request, TENANT);
 
         // create an InOrder verifier for the objects you care about
-        InOrder order = inOrder(notificationRepository, emailSender);
+        InOrder order = inOrder(notificationRepository, notificationDispatcher);
 
         // then verify they were called in this exact sequence
         order.verify(notificationRepository).save(any());   // save first
-        order.verify(emailSender).send(any());              // then send
-        assertThat(response.getStatus()).isEqualTo(NotificationStatus.SENT);
+        order.verify(notificationDispatcher).dispatchNotification(any());              // then send
+        assertThat(response.getStatus()).isEqualTo(NotificationStatus.QUEUED);
     }
 
 }
