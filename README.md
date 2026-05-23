@@ -6,6 +6,9 @@ It also handles idempotency of notifications, and retries failed notifications a
 
 ## Live Demo
 
+**Swagger UI:** http://3.111.159.59:8080/swagger-ui/index.html
+
+
 Login:
 ```bash
 curl -X POST http://3.111.159.59:8080/api/v1/auth/login \
@@ -87,6 +90,7 @@ Steps:
 5. Run the app: `mvn spring-boot:run -pl api --also-make`
 6. API available at `http://localhost:8080`
 7. Swagger UI at `http://localhost:8080/swagger-ui/index.html`
+8. Swagger UI (live): `http://3.111.159.59:8080/swagger-ui/index.html`
 
 ***
 ## API Reference
