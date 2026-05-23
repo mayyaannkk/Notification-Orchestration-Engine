@@ -42,4 +42,13 @@ public class NotificationResponse {
                 .message("Already processed for key: " + idempotencyKey)
                 .build();
     }
+
+    public static NotificationResponse queued(String id, Instant createdAt) {
+        return NotificationResponse.builder()
+                .id(id)
+                .status(NotificationStatus.QUEUED)
+                .message("Notification accepted and queued for delivery")
+                .createdAt(createdAt)
+                .build();
+    }
 }

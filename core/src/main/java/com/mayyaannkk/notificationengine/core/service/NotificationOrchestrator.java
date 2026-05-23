@@ -3,6 +3,7 @@ package com.mayyaannkk.notificationengine.core.service;
 import com.mayyaannkk.notificationengine.core.dto.NotificationRequest;
 import com.mayyaannkk.notificationengine.core.dto.NotificationResponse;
 import com.mayyaannkk.notificationengine.core.port.EmailSender;
+import com.mayyaannkk.notificationengine.core.port.NotificationDispatcher;
 import com.mayyaannkk.notificationengine.persistence.entity.Notification;
 import com.mayyaannkk.notificationengine.persistence.entity.NotificationStatus;
 import com.mayyaannkk.notificationengine.persistence.repository.NotificationRepository;
@@ -19,7 +20,7 @@ import java.util.Optional;
 public class NotificationOrchestrator {
 
     private final NotificationRepository repository;
-    private final EmailSender emailSender;
+    private final NotificationDispatcher notificationDispatcher;
 
     @Transactional
     public NotificationResponse process(NotificationRequest request, String tenantId) {
@@ -47,19 +48,19 @@ public class NotificationOrchestrator {
 
         repository.save(notification);
 
-        boolean sent = emailSender.send(notification);
-        if(sent) {
-            log.info("Notification sent: {}", notification);
-            notification.setStatus(NotificationStatus.SENT);
+        boolean dispatched = notificationDispatcher.dispatchNotification(notification);
+        if(dispatched) {
+            log.info("Notification queued id={}", notification.getId());
+            notification.setStatus(NotificationStatus.QUEUED);
         } else {
             notification.setStatus(NotificationStatus.FAILED);
         }
 
-        Notification notificationResponse = repository.save(notification);
+        repository.save(notification);
         log.info("Notification save in db!");
 
-        return sent
-                ? NotificationResponse.sent(notificationResponse.getId(), notificationResponse.getCreatedAt())
-                : NotificationResponse.failed(notificationResponse.getId());
+        return dispatched
+                ? NotificationResponse.queued(notification.getId(), notification.getCreatedAt())
+                : NotificationResponse.failed(notification.getId());
     }
 }

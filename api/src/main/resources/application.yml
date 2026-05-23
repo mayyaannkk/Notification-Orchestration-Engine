@@ -8,13 +8,19 @@ spring:
     password: secret
     driver-class-name: org.postgresql.Driver
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: email-worker-group
+      auto-offset-reset: earliest
+
   jpa:
     hibernate:
       ddl-auto: validate
     show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   flyway:
     enabled: true
@@ -54,7 +60,3 @@ management:
 
 server:
   port: 8080
-
-  properties:
-    hibernate:
-      dialect: org.hibernate.dialect.PostgreSQLDialect
