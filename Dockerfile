@@ -7,6 +7,7 @@ COPY pom.xml .
 COPY persistence/pom.xml persistence/
 COPY core/pom.xml core/
 COPY auth/pom.xml auth/
+COPY kafka/pom.xml kafka/
 COPY channels/pom.xml channels/
 COPY api/pom.xml api/
 
@@ -18,6 +19,7 @@ RUN mvn dependency:go-offline -B
 COPY persistence/src persistence/src
 COPY core/src core/src
 COPY auth/src auth/src
+COPY kafka/src kafka/src
 COPY channels/src channels/src
 COPY api/src api/src
 
