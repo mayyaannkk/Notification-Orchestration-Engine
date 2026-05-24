@@ -1,6 +1,6 @@
 # Notification Orchestration Engine
 
-A centralized, synchronous, multi-tenant notification delivery engine that runs on EC2, authenticates the users using JWT, and delivers notification via email.
+A centralized, **asynchronous**, multi-tenant notification delivery engine that runs on EC2, authenticates the users using JWT, and delivers notification via email.
 
 It also handles idempotency of notifications, and retries failed notifications at regular intervals.
 
@@ -8,6 +8,7 @@ It also handles idempotency of notifications, and retries failed notifications a
 
 **Swagger UI:** http://3.111.159.59:8080/swagger-ui/index.html
 
+> Note: The API returns `QUEUED` status — the notification is accepted and published to Kafka. Delivery happens asynchronously via the EmailWorker consumer.
 
 Login:
 ```bash
@@ -146,7 +147,7 @@ Send a notification. Requires Bearer token:
 ***
 ## Roadmap
 
-### Phase 2 — Asynchronous Delivery with Kafka
+### ✅ Phase 2 — Asynchronous Delivery with Kafka (complete)
 Phase 1 processes notifications synchronously — the HTTP request waits while the
 email sends. This works but has a problem: if the email provider is slow or down,
 the caller is blocked.
