@@ -39,6 +39,12 @@
             <version>${project.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.mayyaannkk.notificationengine</groupId>
+            <artifactId>cache</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- The HTTP layer — @RestController lives here -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

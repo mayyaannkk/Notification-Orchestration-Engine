@@ -2,8 +2,10 @@ package com.mayyaannkk.notificationengine.core.service;
 
 import com.mayyaannkk.notificationengine.core.dto.NotificationRequest;
 import com.mayyaannkk.notificationengine.core.dto.NotificationResponse;
+import com.mayyaannkk.notificationengine.core.exception.RateLimitExceededException;
 import com.mayyaannkk.notificationengine.core.port.EmailSender;
 import com.mayyaannkk.notificationengine.core.port.NotificationDispatcher;
+import com.mayyaannkk.notificationengine.core.port.RateLimiter;
 import com.mayyaannkk.notificationengine.persistence.entity.Notification;
 import com.mayyaannkk.notificationengine.persistence.entity.NotificationStatus;
 import com.mayyaannkk.notificationengine.persistence.repository.NotificationRepository;
@@ -21,10 +23,15 @@ public class NotificationOrchestrator {
 
     private final NotificationRepository repository;
     private final NotificationDispatcher notificationDispatcher;
+    private final RateLimiter rateLimiter;
 
     @Transactional
     public NotificationResponse process(NotificationRequest request, String tenantId) {
-        log.info("Request received: {}", request);
+        log.info("Request received for tenantId={} channel={}", tenantId, request.getChannel());
+
+        if(!rateLimiter.tryAcquire(tenantId, request.getChannel())) {
+            throw new RateLimitExceededException(tenantId);
+        }
 
         if(request.getIdempotencyKey() != null) {
             Optional<Notification> byIdempotencyKey = repository.findByIdempotencyKey(request.getIdempotencyKey());

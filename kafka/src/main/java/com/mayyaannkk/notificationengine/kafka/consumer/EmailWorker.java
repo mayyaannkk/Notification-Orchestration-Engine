@@ -28,6 +28,18 @@ public class EmailWorker {
     public void consume(Notification notification, Acknowledgment ack) {
         log.info("Received notification: {}", notification.getId());
         try {
+            // Fetch fresh copy from DB — avoids stale object conflicts
+            Notification fresh = notificationRepository
+                    .findById(notification.getId())
+                    .orElse(null);
+
+            if (fresh == null) {
+                log.warn("Notification {} not found in DB, skipping",
+                        notification.getId());
+                ack.acknowledge();
+                return;
+            }
+            
             boolean sent = emailSender.send(notification);
             if (sent) {
                 notification.setStatus(NotificationStatus.SENT);

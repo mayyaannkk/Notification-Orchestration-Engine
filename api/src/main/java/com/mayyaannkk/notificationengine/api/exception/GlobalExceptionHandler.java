@@ -1,6 +1,7 @@
 package com.mayyaannkk.notificationengine.api.exception;
 
 import com.mayyaannkk.notificationengine.core.exception.DuplicateNotificationException;
+import com.mayyaannkk.notificationengine.core.exception.RateLimitExceededException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,5 +42,12 @@ public class GlobalExceptionHandler {
         log.error("Unexpected error occurred: ", ex);
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ErrorResponse.of(500, "An unexpected error occurred"));
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimit(RateLimitExceededException ex) {
+        log.warn("Rate limit exceeded: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ErrorResponse.of(429, ex.getMessage()));
     }
 }

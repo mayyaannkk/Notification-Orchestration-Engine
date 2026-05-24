@@ -22,6 +22,7 @@
 		<module>persistence</module>
 		<module>core</module>
 		<module>auth</module>
+		<module>cache</module>
 		<module>kafka</module>
 		<module>channels</module>
 		<module>api</module>
