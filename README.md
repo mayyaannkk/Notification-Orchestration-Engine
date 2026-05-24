@@ -8,6 +8,10 @@ It also handles idempotency of notifications, and retries failed notifications a
 
 **Swagger UI:** http://3.111.159.59:8080/swagger-ui/index.html
 
+**Postman Collection:** [Run in Postman](https://mayyaannkk-101309.postman.co/workspace/Mayank-Pant's-Workspace~bcb113d5-1682-4009-8cf2-71caba4a08a8/collection/47658753-3aef6fc5-4f20-4b2e-9594-c1769e7d5af0?action=share&source=copy-link&creator=47658753)
+
+> Import the collection, run Login first to get the token automatically saved, then run any other request.
+
 > Note: The API returns `QUEUED` status — the notification is accepted and published to Kafka. Delivery happens asynchronously via the EmailWorker consumer.
 
 Login:
@@ -42,11 +46,17 @@ The application, at regular intervals, also tries to retry failed delivery by fe
 
 ***
 ## Architecture
-The application takes in the request, the controller takes it, validates the request and diverts it to the orchestrator which then first saves the notification in the DB with a state of PENDING.
 
-It then tries to send the notification via the specified channel, if successful, it will update the DB notification status to SENT. Else it will update to FAILED.
-
-This ensures that the notification is saved in the DB first, so even if the delivery fails, our scheduled retry will pick the FAILED ones and try to run them again.
+### Request Flow
+1. Client authenticates via `POST /api/v1/auth/login` and receives a JWT token
+2. Client sends notification request to `POST /api/v1/notifications` with Bearer token
+3. Spring Security filter validates the JWT and sets the tenant identity
+4. `NotificationOrchestrator` checks for duplicate idempotency key
+5. Notification saved to PostgreSQL as `PENDING`
+6. Orchestrator publishes to Kafka topic `notifications.email` and returns `QUEUED` immediately — the HTTP request is done
+7. `EmailWorker` consumer picks up the message asynchronously and calls Gmail SMTP
+8. Status updated to `SENT` or `FAILED` in PostgreSQL
+9. `RetryScheduler` polls every 60 seconds for `FAILED` notifications and retries up to 3 times before marking `DEAD`
 
 ***
 ## Notification Status Lifecycle
@@ -71,6 +81,7 @@ The notification status works like a finite state machine and moves from PENDING
 | Docker | Consistent environment across development and production |
 | AWS EC2 | Cloud deployment with auto-restart on reboot |
 | Testcontainers | Integration tests against real PostgreSQL — no in-memory substitutes |
+| Apache Kafka | Async message queue — decouples HTTP request from email delivery |
 
 ***
 ## Modules
