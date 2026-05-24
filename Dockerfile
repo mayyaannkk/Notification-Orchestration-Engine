@@ -10,6 +10,7 @@ COPY auth/pom.xml auth/
 COPY kafka/pom.xml kafka/
 COPY channels/pom.xml channels/
 COPY api/pom.xml api/
+COPY cache/pom.xml cache/
 
 
 RUN apk add --no-cache maven
@@ -22,6 +23,7 @@ COPY auth/src auth/src
 COPY kafka/src kafka/src
 COPY channels/src channels/src
 COPY api/src api/src
+COPY cache/src cache/src
 
 RUN mvn package -DskipTests -B
 
