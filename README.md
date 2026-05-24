@@ -36,13 +36,42 @@ curl -X POST http://3.111.159.59:8080/api/v1/notifications \
 
 ***
 ## Why I Built It This Way
-Phase 1 is intentionally synchronous — the goal was to establish the complete delivery pipeline, understand the failure modes, and build a solid retry mechanism before introducing asynchronous complexity. 
 
-Later on we will move towards Kafka to decouple the request from the backend, so the user can fire-and-forget and the system will process it at its own pace.
+### Phase 1 — Synchronous Foundation
+The first version was intentionally synchronous. Before introducing any async complexity,
+I wanted to establish the complete delivery pipeline end to end — controller to orchestrator
+to database to email provider — and understand the failure modes at each step.
 
-The application also supports multi-tenant idempotent notification delivery, meaning that multiple users can access it, but each notification will only be sent once. The application handles duplicate requests via idempotencyKey.
+This gave clarity on three things: what the notification lifecycle looks like
+(PENDING → SENT/FAILED), how retries should work when delivery fails, and where
+the natural boundaries between modules should be. A `RetryScheduler` polls the
+database every 60 seconds for FAILED notifications and retries up to 3 times
+before marking them DEAD.
 
-The application, at regular intervals, also tries to retry failed delivery by fetching them from the database. The retry logic happens for each FAILED notification until the max retry count, and after that the notification goes to a DEAD state.
+The application also supports multi-tenant idempotent delivery from the start —
+each notification carries an optional idempotency key. If the same key is seen
+twice, the duplicate is detected before any processing happens, preventing
+double sends during client retries or network failures.
+
+### Phase 2 — Async Delivery with Kafka
+Phase 1 had one clear problem: the HTTP request blocked until the email was
+delivered. If Gmail was slow or temporarily down, the caller waited. At scale,
+this ties up threads and degrades the entire system.
+
+Phase 2 replaced the synchronous send with a Kafka topic. The orchestrator
+now publishes the notification to `notifications.email` and returns `QUEUED`
+immediately — the HTTP request completes in milliseconds regardless of email
+provider performance. A separate `EmailWorker` consumer picks up the message
+and handles delivery asynchronously.
+
+This also gave a better retry mechanism. Instead of a polling scheduler,
+Kafka redelivers unconsumed messages automatically. Failed messages after
+3 redeliveries go to a Dead Letter Queue (`notifications.dlq`) for manual
+inspection.
+
+The before/after is demonstrable — in Phase 1 the HTTP thread and the email
+send thread were the same. In Phase 2 they are different threads entirely,
+visible in the application logs.
 
 ***
 ## Architecture
@@ -102,7 +131,6 @@ Steps:
 5. Run the app: `mvn spring-boot:run -pl api --also-make`
 6. API available at `http://localhost:8080`
 7. Swagger UI at `http://localhost:8080/swagger-ui/index.html`
-8. Swagger UI (live): `http://3.111.159.59:8080/swagger-ui/index.html`
 
 ***
 ## API Reference
@@ -149,8 +177,8 @@ Send a notification. Requires Bearer token:
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "SENT",
-  "message": "Notification sent successfully",
+  "status": "QUEUED",
+  "message": "Notification accepted and queued for delivery",
   "createdAt": "2026-05-22T16:58:40Z"
 }
 ```
