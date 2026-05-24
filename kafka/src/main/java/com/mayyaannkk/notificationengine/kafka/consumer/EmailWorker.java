@@ -39,7 +39,7 @@ public class EmailWorker {
                 ack.acknowledge();
                 return;
             }
-            
+
             boolean sent = emailSender.send(notification);
             if (sent) {
                 notification.setStatus(NotificationStatus.SENT);

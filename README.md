@@ -73,6 +73,25 @@ The before/after is demonstrable — in Phase 1 the HTTP thread and the email
 send thread were the same. In Phase 2 they are different threads entirely,
 visible in the application logs.
 
+### Phase 3 — Rate Limiting with Redis
+Phase 2 introduced a new problem: a single tenant could now fire thousands of
+requests per second — each one accepted, saved to the database, and published
+to Kafka — overwhelming the system and degrading service for everyone else.
+
+A database counter was not the right solution. Every rate limit check would require
+a database query with locking, adding latency to every single request and creating
+a new bottleneck. The rate limiter needed to be faster than the thing it was protecting.
+
+Phase 3 adds a sliding window rate limiter using Redis sorted sets. Redis operates
+in microseconds with atomic operations — no locking, no disk I/O. Each tenant gets
+an independent counter per channel. The rate limit check happens as the very first
+operation in the orchestrator — before idempotency check, before database write,
+before Kafka publish. If the limit is exceeded, the request is rejected immediately
+with 429 Too Many Requests without touching any other system.
+
+The sliding window avoids the burst problem of fixed windows — there is no boundary
+moment where a tenant can double their rate by timing requests at a window reset.
+
 ***
 ## Architecture
 
@@ -80,12 +99,13 @@ visible in the application logs.
 1. Client authenticates via `POST /api/v1/auth/login` and receives a JWT token
 2. Client sends notification request to `POST /api/v1/notifications` with Bearer token
 3. Spring Security filter validates the JWT and sets the tenant identity
-4. `NotificationOrchestrator` checks for duplicate idempotency key
-5. Notification saved to PostgreSQL as `PENDING`
-6. Orchestrator publishes to Kafka topic `notifications.email` and returns `QUEUED` immediately — the HTTP request is done
-7. `EmailWorker` consumer picks up the message asynchronously and calls Gmail SMTP
-8. Status updated to `SENT` or `FAILED` in PostgreSQL
-9. `RetryScheduler` polls every 60 seconds for `FAILED` notifications and retries up to 3 times before marking `DEAD`
+4. `NotificationOrchestrator` checks rate limit via Redis — rejects with 429 if exceeded
+5. Idempotency key checked — rejects with SKIPPED if duplicate detected
+6. Notification saved to PostgreSQL as `PENDING`
+7. Orchestrator publishes to Kafka topic `notifications.email` and returns `QUEUED` immediately
+8. `EmailWorker` consumer picks up the message asynchronously and calls Gmail SMTP
+9. Status updated to `SENT` or `FAILED` in PostgreSQL
+10. `RetryScheduler` polls every 60 seconds for `FAILED` notifications and retries up to 3 times before marking `DEAD`
 
 ***
 ## Notification Status Lifecycle
@@ -111,6 +131,8 @@ The notification status works like a finite state machine and moves from PENDING
 | AWS EC2 | Cloud deployment with auto-restart on reboot |
 | Testcontainers | Integration tests against real PostgreSQL — no in-memory substitutes |
 | Apache Kafka | Async message queue — decouples HTTP request from email delivery |
+| Redis | Per-tenant sliding window rate limiter — microsecond latency, atomic ZSET operations |
+
 
 ***
 ## Modules
@@ -127,7 +149,7 @@ Steps:
 1. Clone the repository
 2. Make sure Docker Desktop is running
 3. Set environment variables (see `.env.example`)
-4. Start the database: `docker-compose up -d postgres`
+4. Start infrastructure: `docker-compose up -d`
 5. Run the app: `mvn spring-boot:run -pl api --also-make`
 6. API available at `http://localhost:8080`
 7. Swagger UI at `http://localhost:8080/swagger-ui/index.html`
@@ -202,15 +224,22 @@ Changes:
 - DLQ (Dead Letter Queue): failed messages after 3 retries go to `notifications.dlq`
 - RetryScheduler: replaced by Kafka retry with exponential backoff
 
-### Phase 3 — Rate Limiting with Redis
+### ✅ Phase 3 — Rate Limiting with Redis (complete)
 Without rate limiting, a single tenant can flood the system with thousands of
 notifications per second, degrading service for everyone else.
 
-Phase 3 adds a sliding window rate limiter using Redis sorted sets. Each tenant gets
-a configurable limit per minute per channel. Requests exceeding the limit receive
-a 429 Too Many Requests response immediately.
+Phase 3 adds a sliding window rate limiter using Redis sorted sets. Each tenant
+gets a configurable limit per minute per channel (default: 10). Requests exceeding
+the limit receive a 429 Too Many Requests response immediately — before any
+database or Kafka interaction happens.
+
+The sliding window algorithm uses Redis ZSET operations:
+- Remove entries older than 60 seconds
+- Count remaining entries
+- If count >= limit → reject with 429
+- Otherwise → add entry and accept
 
 Changes:
 - `cache` module: RedisRateLimiter using ZSET sliding window algorithm
-- Orchestrator: rate limit check before processing
-- Per-tenant, per-channel configurable limits
+- Orchestrator: rate limit check as first operation before any processing
+- Per-tenant, per-channel configurable limits via app.rate-limit.max-per-minute
